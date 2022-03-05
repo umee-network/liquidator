@@ -3,27 +3,15 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
-	"github.com/knadh/koanf"
-	"github.com/knadh/koanf/parsers/toml"
-	"github.com/knadh/koanf/providers/file"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/umee-network/liquidator/core"
-)
-
-const (
-	envVariablePass = "LIQUIDATOR_PASSWORD"
-	flagConfigPath  = "config-file"
-	logLevelJSON    = "json"
-	logLevelText    = "text"
 )
 
 var rootCmd = &cobra.Command{
@@ -44,12 +32,16 @@ func Execute() {
 }
 
 func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
+	lock.Lock()
+	launched = true // prevents further calls to Init
+	lock.Unlock()
+
 	configPath, err := cmd.Flags().GetString(flagConfigPath)
 	if err != nil {
 		return err
 	}
 
-	konfig, err := loadConfig(configPath)
+	konfig, err := getConfig(configPath)
 	if err != nil {
 		return err
 	}
@@ -59,7 +51,7 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	password, err := getPassword()
+	password, err := getPass()
 	if err != nil {
 		return err
 	}
@@ -71,19 +63,8 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 	trapSignal(cancel, logger)
 
 	g.Go(func() error {
-		liq := core.NewLiquidator(ctx,
-			logger,
-			konfig,
-			password,
-			core.DefaultWaitFunc,
-			core.EmptyTargetFunc,
-			core.EmptyOrderingFunc,
-			core.EmptyEstimationFunc,
-			core.EmptyDecisionFunc,
-			core.EmptyExecuteFunc,
-		)
 		// returns on context cancelled
-		return liq.Start()
+		return core.Start(ctx, logger, konfig, password, cancel)
 	})
 
 	// Block main process until all spawned goroutines have gracefully exited and
@@ -106,57 +87,4 @@ func trapSignal(cancel context.CancelFunc, logger *zerolog.Logger) {
 		logger.Info().Str("signal", sig.String()).Msg("caught signal; shutting down...")
 		cancel()
 	}()
-}
-
-// getPassword reads the keyring password from an environment variable
-func getPassword() (string, error) {
-	pass := os.Getenv(envVariablePass)
-	if pass == "" {
-		return "", fmt.Errorf("empty keyring password")
-	}
-	return pass, nil
-}
-
-// loadConfig returns a koanf configuration loaded from a specified filepath
-func loadConfig(path string) (*koanf.Koanf, error) {
-	var k = koanf.New(".")
-
-	// Load toml config from specified file path
-	f := file.Provider(path)
-	if err := k.Load(f, toml.Parser()); err != nil {
-		return nil, err
-	}
-
-	return k, nil
-}
-
-// getLogger returns a zerolog logger configured from the "log.level" and "log.format"
-// fields of a koanf config. Log format should be "json" or "text".
-func getLogger(konfig *koanf.Koanf) (*zerolog.Logger, error) {
-
-	logLvl, err := zerolog.ParseLevel(konfig.String("log.level"))
-	if err != nil {
-		return nil, err
-	}
-
-	logFormat := strings.ToLower(konfig.String("log.format"))
-
-	var logWriter io.Writer
-	if strings.ToLower(logFormat) == logLevelText {
-		logWriter = zerolog.ConsoleWriter{Out: os.Stderr}
-	} else {
-		logWriter = os.Stderr
-	}
-
-	switch logFormat {
-	case logLevelJSON:
-		logWriter = os.Stderr
-	case logLevelText:
-		logWriter = zerolog.ConsoleWriter{Out: os.Stderr}
-	default:
-		return nil, fmt.Errorf("invalid logging format: %s", logFormat)
-	}
-
-	logger := zerolog.New(logWriter).Level(logLvl).With().Timestamp().Logger()
-	return &logger, nil
 }
