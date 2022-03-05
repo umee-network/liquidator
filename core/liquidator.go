@@ -79,7 +79,8 @@ func Stop() {
 
 // Start causes the liquidator to continuously look for liquidation targets, decide on which
 // borrowed and collateral denominations to attempt to liquidate, and attempt to execute any
-// liquidations whose estimated outcomes are approved by its configured decisionmaking.
+// liquidations whose estimated outcomes are approved by its configured decisionmaking. Returns
+// only when context is cancelled.
 func Start(
 	ctx context.Context,
 	logger *zerolog.Logger,
