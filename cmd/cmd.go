@@ -16,7 +16,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/umee-network/liquidator/base"
+	"github.com/umee-network/liquidator/core"
 )
 
 const (
@@ -71,16 +71,16 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 	trapSignal(cancel, logger)
 
 	g.Go(func() error {
-		liq := base.NewLiquidator(ctx,
+		liq := core.NewLiquidator(ctx,
 			logger,
 			konfig,
 			password,
-			base.DefaultWaitFunc,
-			base.EmptyTargetFunc,
-			base.EmptyOrderingFunc,
-			base.EmptyEstimationFunc,
-			base.EmptyDecisionFunc,
-			base.EmptyExecuteFunc,
+			core.DefaultWaitFunc,
+			core.EmptyTargetFunc,
+			core.EmptyOrderingFunc,
+			core.EmptyEstimationFunc,
+			core.EmptyDecisionFunc,
+			core.EmptyExecuteFunc,
 		)
 		// returns on context cancelled
 		return liq.Start()
