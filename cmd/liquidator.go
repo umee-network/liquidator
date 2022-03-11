@@ -5,6 +5,10 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/knadh/koanf"
+	"github.com/rs/zerolog"
+
+	"github.com/umee-network/liquidator/client"
 )
 
 // LiquidationTarget contains the address of a borrower who is over their borrow limit, as
@@ -31,8 +35,33 @@ type LiquidationOrder struct {
 // only when context is cancelled.
 func startLiquidator(
 	ctx context.Context,
+	konfig *koanf.Koanf,
+	logger *zerolog.Logger,
+	password string,
 	cancelFunc context.CancelFunc,
 ) error {
+	leverageClient, err := client.NewLeverageClient(
+		*logger,
+		konfig.MustString("chainID"),
+		konfig.MustString("keyring.backend"),
+		konfig.MustString("keyring.dir"),
+		password,
+		konfig.MustString("tmRPC.endpoint"),
+		konfig.MustDuration("tmRPC.timeout"),
+		konfig.MustString("liquidatorAddress"),
+		konfig.MustString("grpc.endpoint"),
+		konfig.MustFloat64("gasAdjustment"),
+	)
+	if err != nil {
+		return err
+	}
+
+	// confirm client connectivity
+	_, err = leverageClient.BlockHeight()
+	if err != nil {
+		return err
+	}
+
 	// loop as long as ctx is not cancelled
 	for ctx.Err() == nil {
 		// get a list of eligible liquidation targets
@@ -44,42 +73,46 @@ func startLiquidator(
 
 		for _, target := range targets {
 			if ctx.Err() == nil {
-				// determine reward and repay denominations of most interest on the target, if any
-				intent, err := selectLiquidationDenoms(ctx, target)
+				// select one reward denom and one repay denom to consider on target address
+				intent, ok, err := selectLiquidationDenoms(ctx, target)
 				if err != nil {
 					logger.Err(err)
 					continue
 				}
-				// estimate actual liquidation outcome if it were to be executed
+				if !ok {
+					continue
+				}
+				// estimate actual liquidation outcome if chosen denoms were to be liquidated
 				estimate, err := estimateLiquidationOutcome(ctx, intent)
 				if err != nil {
 					logger.Err(err)
 					continue
 				}
-				// decide whether to liquidate based on estimated outcomes
-				ok, err := decisionFunc(ctx, estimate)
+				// decide whether to liquidate based on estimated outcome
+				ok, err = decisionFunc(ctx, estimate)
 				if err != nil {
 					logger.Err(err)
 					continue
 				}
-				// attempt liquidation if it was approved by decisionFunc
-				if ok {
-					outcome, err := executeLiquidation(ctx, intent)
-					if err != nil {
-						logger.Err(err)
-						continue
-					}
-					logger.Info().Msgf(
-						"LIQUIDATION SUCCESS: target: %s repaid %s reward%s",
-						outcome.Addr.String(),
-						outcome.Repay.String(),
-						outcome.Reward.String(),
-					)
+				if !ok {
+					continue
 				}
+				// attempt liquidation if it was approved by decisionFunc
+				outcome, err := executeLiquidation(ctx, intent)
+				if err != nil {
+					logger.Err(err)
+					continue
+				}
+				logger.Info().Msgf(
+					"LIQUIDATION SUCCESS: target: %s repaid %s reward%s",
+					outcome.Addr.String(),
+					outcome.Repay.String(),
+					outcome.Reward.String(),
+				)
 			}
 		}
 
-		// Wait at the end of each cycle
+		// Sleep at the end of each cycle
 		time.Sleep(time.Minute)
 	}
 	return ctx.Err()
@@ -104,10 +137,11 @@ func getLiquidationTargets(ctx context.Context) ([]LiquidationTarget, error) {
 // in every collateral denom. Furthermore, if one liquidation brings the borrower
 // back to health, then the remaining ones will no longer be available. The
 // selectLiquidationDenoms function should choose the reward and repay denoms from
-// available options.
-func selectLiquidationDenoms(ctx context.Context, target LiquidationTarget) (LiquidationOrder, error) {
+// available options. Also returns a boolean, which can be set to false if no
+// workable denominations were discovered.
+func selectLiquidationDenoms(ctx context.Context, target LiquidationTarget) (LiquidationOrder, bool, error) {
 	// TODO: body
-	return LiquidationOrder{}, nil
+	return LiquidationOrder{}, false, nil
 }
 
 // estimateLiquidationOutcome simulates the result of a MsgLiquidate in selected
@@ -124,7 +158,7 @@ func decisionFunc(ctx context.Context, estimate LiquidationOrder) (bool, error) 
 	return false, nil
 }
 
-// executeLiquidation attempts to execute a decided liquidation, and reports back
+// executeLiquidation attempts to execute a chosen liquidation, and reports back
 // the actual repaid and reward amounts if successful
 func executeLiquidation(ctx context.Context, intent LiquidationOrder) (LiquidationOrder, error) {
 	// TODO: body

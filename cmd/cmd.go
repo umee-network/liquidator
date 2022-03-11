@@ -24,12 +24,6 @@ const (
 	logLevelText    = "text"
 )
 
-var (
-	konfig   *koanf.Koanf
-	logger   *zerolog.Logger
-	password string
-)
-
 var rootCmd = &cobra.Command{
 	Use:   "liquidator [" + flagConfigPath + "]",
 	Args:  cobra.ExactArgs(1),
@@ -54,17 +48,17 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	konfig, err = loadConfig(configPath)
+	konfig, err := loadConfig(configPath)
 	if err != nil {
 		return err
 	}
 
-	logger, err = getLogger(konfig)
+	logger, err := getLogger(konfig)
 	if err != nil {
 		return err
 	}
 
-	password, err = getPassword()
+	password, err := getPassword()
 	if err != nil {
 		return err
 	}
@@ -77,7 +71,7 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 
 	g.Go(func() error {
 		// returns on context cancelled
-		return startLiquidator(ctx, cancel)
+		return startLiquidator(ctx, konfig, logger, password, cancel)
 	})
 
 	// Block main process until all spawned goroutines have gracefully exited and
