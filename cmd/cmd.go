@@ -20,8 +20,6 @@ import (
 const (
 	envVariablePass = "LIQUIDATOR_PASSWORD"
 	flagConfigPath  = "config-file"
-	logLevelJSON    = "json"
-	logLevelText    = "text"
 )
 
 var rootCmd = &cobra.Command{
@@ -113,16 +111,16 @@ func getLogger(konfig *koanf.Koanf) (*zerolog.Logger, error) {
 	logFormat := strings.ToLower(konfig.String("log.format"))
 
 	var logWriter io.Writer
-	if strings.ToLower(logFormat) == logLevelText {
+	if strings.ToLower(logFormat) == "text" {
 		logWriter = zerolog.ConsoleWriter{Out: os.Stderr}
 	} else {
 		logWriter = os.Stderr
 	}
 
 	switch logFormat {
-	case logLevelJSON:
+	case "json":
 		logWriter = os.Stderr
-	case logLevelText:
+	case "text":
 		logWriter = zerolog.ConsoleWriter{Out: os.Stderr}
 	default:
 		return nil, fmt.Errorf("invalid logging format: %s", logFormat)
