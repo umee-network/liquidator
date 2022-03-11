@@ -111,7 +111,7 @@ func getLogger(konfig *koanf.Koanf) (*zerolog.Logger, error) {
 	logFormat := strings.ToLower(konfig.String("log.format"))
 
 	var logWriter io.Writer
-	if strings.ToLower(logFormat) == "text" {
+	if logFormat == "text" {
 		logWriter = zerolog.ConsoleWriter{Out: os.Stderr}
 	} else {
 		logWriter = os.Stderr
