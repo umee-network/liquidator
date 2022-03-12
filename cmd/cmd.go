@@ -22,12 +22,22 @@ const (
 	flagConfigPath  = "config-file"
 )
 
+var (
+	konfig   *koanf.Koanf
+	logger   *zerolog.Logger
+	password string
+
+	// TODO: Init and store various clients
+	// leverageClient client.LeverageClient
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "liquidator [" + flagConfigPath + "]",
 	Args:  cobra.ExactArgs(1),
 	Short: "liquidator runs a basic umee liquidator bot",
-	Long:  `liquidator runs a basic umee liquidator bot.`,
-	RunE:  liquidatorCmdHandler,
+	Long: `liquidator runs a basic umee liquidator bot. Reads environment var
+LIQUIDATOR_PASSWORD on start as well as requiring a toml config file.`,
+	RunE: liquidatorCmdHandler,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -46,17 +56,17 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	konfig, err := loadConfig(configPath)
+	konfig, err = loadConfig(configPath)
 	if err != nil {
 		return err
 	}
 
-	logger, err := getLogger(konfig)
+	logger, err = getLogger(konfig)
 	if err != nil {
 		return err
 	}
 
-	password, err := getPassword()
+	password, err = getPassword()
 	if err != nil {
 		return err
 	}
@@ -69,7 +79,7 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 
 	g.Go(func() error {
 		// returns on context cancelled
-		return startLiquidator(ctx, konfig, logger, password, cancel)
+		return startLiquidator(ctx, cancel)
 	})
 
 	// Block main process until all spawned goroutines have gracefully exited and

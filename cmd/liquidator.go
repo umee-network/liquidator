@@ -5,10 +5,6 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/knadh/koanf"
-	"github.com/rs/zerolog"
-
-	"github.com/umee-network/liquidator/client"
 )
 
 // LiquidationTarget contains the address of a borrower who is over their borrow limit, as
@@ -35,32 +31,8 @@ type LiquidationOrder struct {
 // only when context is cancelled.
 func startLiquidator(
 	ctx context.Context,
-	konfig *koanf.Koanf,
-	logger *zerolog.Logger,
-	password string,
 	cancelFunc context.CancelFunc,
 ) error {
-	leverageClient, err := client.NewLeverageClient(
-		*logger,
-		konfig.MustString("chainID"),
-		konfig.MustString("keyring.backend"),
-		konfig.MustString("keyring.dir"),
-		password,
-		konfig.MustString("tmRPC.endpoint"),
-		konfig.MustDuration("tmRPC.timeout"),
-		konfig.MustString("liquidatorAddress"),
-		konfig.MustString("grpc.endpoint"),
-		konfig.MustFloat64("gasAdjustment"),
-	)
-	if err != nil {
-		return err
-	}
-
-	// confirm client connectivity
-	_, err = leverageClient.BlockHeight()
-	if err != nil {
-		return err
-	}
 
 	// loop as long as ctx is not cancelled
 	for ctx.Err() == nil {
