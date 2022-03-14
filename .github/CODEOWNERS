@@ -1,0 +1,13 @@
+# CODEOWNERS: https://help.github.com/articles/about-codeowners/
+
+# NOTE: Order is important; the last matching pattern takes the 
+# most precedence.
+
+# Primary repo maintainers
+*       @umee-network/core-devs
+
+# Infrastructure & devops maintainers
+/infra/ @umee-network/core-sre
+
+# Documentation
+*.md @umee-network/core-docs
