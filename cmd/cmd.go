@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	envVariablePass = "LIQUIDATOR_PASSWORD"
-	flagConfigPath  = "config-file"
+	envVariablePass = "UMEE_LIQUIDATOR_PASSWORD"
+	flagConfigPath  = "config"
 )
 
 var (
@@ -31,19 +31,23 @@ var (
 	// leverageClient client.LeverageClient
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "liquidator [" + flagConfigPath + "]",
-	Args:  cobra.ExactArgs(1),
-	Short: "liquidator runs a basic umee liquidator bot",
-	Long: `liquidator runs a basic umee liquidator bot. Reads environment var
+func NewRootCmd() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:   "umeeliqd",
+		Short: "umeeliqd runs a basic umee liquidator bot",
+		Long: `umeeliquidd runs a basic umee liquidator bot. Reads environment var
 LIQUIDATOR_PASSWORD on start as well as requiring a toml config file.`,
-	RunE: liquidatorCmdHandler,
+		RunE: liquidatorCmdHandler,
+	}
+
+	cmd.PersistentFlags().String(flagConfigPath, "umeeliqd.toml", "config file path")
+	return cmd
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := NewRootCmd().Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
