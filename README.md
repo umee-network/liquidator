@@ -15,7 +15,12 @@ level="info"
 format="text"
 ```
 
-### Behavior
+## Install
+
+To install the umeeliqd binary:
+`make install`
+
+## Behavior
 
 When launched, umeeliqd does the following
 - loads a config file from the supplied path
