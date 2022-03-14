@@ -55,8 +55,8 @@ whitespace += $(whitespace)
 comma := ,
 build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
 
-ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=umeeliquid \
-		  -X github.com/cosmos/cosmos-sdk/version.AppName=umeeliquidd \
+ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=umeeliq \
+		  -X github.com/cosmos/cosmos-sdk/version.AppName=umeeliqd \
 		  -X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 		  -X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
 		  -X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags_comma_sep)" \
