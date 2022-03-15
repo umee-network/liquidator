@@ -28,7 +28,6 @@ Deprecated: for soon-to-be removed features.
 Bug Fixes: for any bug fixes.
 Client Breaking: for breaking Protobuf, CLI, gRPC and REST routes used by clients.
 API Breaking: for breaking exported Go APIs used by developers.
-State Machine Breaking: for any changes that result in a divergent application state.
 
 To release a new version, ensure an appropriate release branch exists. Add a
 release version and date to the existing Unreleased section which takes the form
