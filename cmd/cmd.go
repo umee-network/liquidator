@@ -54,7 +54,6 @@ func Execute() {
 }
 
 func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
-
 	configPath, err := cmd.Flags().GetString(flagConfigPath)
 	if err != nil {
 		return err

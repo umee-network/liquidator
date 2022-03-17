@@ -16,20 +16,24 @@ format="text"
 
 ## Install
 
-To install the umeeliqd binary:
-`make install`
+To install the `umeeliqd` binary:
+
+```shell
+$ make install
 
 ## Behavior
 
-When launched, umeeliqd does the following
-- loads a config file from the supplied path
-- gets keyring passwrod from environment variable
-- starts its main loop
+When launched, `umeeliqd` performs the following:
 
-The main loop of umeeliqd repeats the following steps
-- gets a list of eligible liquidation targets (addresses) from umeed
-- iterates over each target:
-  - selects preferred reward and repayment denom present on target
-  - simulates the result of liquidation using umeed `x/leverage` parameters
-  - decides whether or not to attempt the liquidation based on estimated rewards
-  - executes the liquidation
+- Loads a config file from the supplied path.
+- Gets keyring passphrase from an environment variable.
+- Starts the main liquidator loop.
+
+The main loop of `umeeliqd` repeats the following steps:
+
+- Retrieves a list of eligible liquidation targets (addresses) from the Umee network:
+- Iterates over each target:
+  - Selects the preferred reward and repayment denom present in the target.
+  - Simulates the result of liquidation using `x/leverage` parameters.
+  - Decides whether or not to attempt the liquidation based on estimated rewards.
+  - Attempts to execute the liquidation.
