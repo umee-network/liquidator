@@ -39,7 +39,11 @@ func StartLiquidator(
 	logger *zerolog.Logger,
 	password string,
 ) error {
-	ticker := time.NewTicker(time.Minute)
+	if err := validateConfig(konfig); err != nil {
+		return err
+	}
+
+	ticker := time.NewTicker(konfig.Duration("liquidator.interval"))
 	defer ticker.Stop()
 
 	for {
@@ -65,7 +69,7 @@ func sweepLiquidations(
 	// get a list of eligible liquidation targets
 	targets, err := getLiquidationTargets(ctx)
 	if err != nil {
-		logger.Err(err)
+		logger.Err(err).Msg("get targets func failed")
 		return
 	}
 
@@ -74,7 +78,16 @@ func sweepLiquidations(
 		// select one reward denom and one repay denom to consider on target address
 		intent, ok, err := selectLiquidationDenoms(ctx, target)
 		if err != nil {
-			logger.Err(err)
+			logger.Err(err).Str(
+				"target-address",
+				target.Addr.String(),
+			).Str(
+				"target-borrowed",
+				target.Borrowed.String(),
+			).Str(
+				"target-collateral",
+				target.Collateral.String(),
+			).Msg("selection func failed")
 			continue
 		}
 		if !ok {
@@ -84,13 +97,32 @@ func sweepLiquidations(
 		// estimate actual liquidation outcome if chosen denoms were to be liquidated
 		estimate, err := estimateLiquidationOutcome(ctx, intent)
 		if err != nil {
-			logger.Err(err)
+			logger.Err(err).Str(
+				"target-address",
+				intent.Addr.String(),
+			).Str(
+				"intended-repay",
+				intent.Repay.String(),
+			).Str(
+				"intended-reward",
+				intent.Reward.String(),
+			).Msg("estimate func failed")
 			continue
 		}
+
 		// decide whether to liquidate based on estimated outcome
 		ok, err = decisionFunc(ctx, estimate)
 		if err != nil {
-			logger.Err(err)
+			logger.Err(err).Str(
+				"target-address",
+				estimate.Addr.String(),
+			).Str(
+				"estimated-repay",
+				estimate.Repay.String(),
+			).Str(
+				"estimated-reward",
+				estimate.Reward.String(),
+			).Msg("decision func failed")
 			continue
 		}
 		if !ok {
@@ -100,16 +132,29 @@ func sweepLiquidations(
 		// attempt liquidation if it was approved by decisionFunc
 		outcome, err := executeLiquidation(ctx, intent)
 		if err != nil {
-			logger.Err(err)
+			logger.Err(err).Str(
+				"target-addres",
+				intent.Addr.String(),
+			).Str(
+				"intended-repay",
+				intent.Repay.String(),
+			).Str(
+				"intended-reward",
+				intent.Reward.String(),
+			).Msg("liquidation func failed")
 			continue
 		}
 
-		logger.Info().Msgf(
-			"LIQUIDATION SUCCESS: target: %s repaid %s reward%s",
+		logger.Info().Str(
+			"target-addres",
 			outcome.Addr.String(),
+		).Str(
+			"repaid",
 			outcome.Repay.String(),
+		).Str(
+			"reward",
 			outcome.Reward.String(),
-		)
+		).Msg("liquidation success")
 	}
 }
 
