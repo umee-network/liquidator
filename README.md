@@ -12,6 +12,9 @@ Uses a toml config file
 [log]
 level="info"
 format="text"
+
+[liquidator]
+wait="1m"
 ```
 
 ## Install
