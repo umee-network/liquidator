@@ -1,10 +1,13 @@
-package cmd
+package liquidator
 
 import (
 	"context"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/knadh/koanf"
+	"github.com/rs/zerolog"
 )
 
 // LiquidationTarget contains the address of a borrower who is over their borrow limit, as
@@ -29,65 +32,85 @@ type LiquidationOrder struct {
 // borrowed and collateral denominations to attempt to liquidate, and attempt to execute any
 // liquidations whose estimated outcomes are approved by its configured decisionmaking. Returns
 // only when context is cancelled.
-func startLiquidator(
+func StartLiquidator(
 	ctx context.Context,
 	cancelFunc context.CancelFunc,
+	konfig *koanf.Koanf,
+	logger *zerolog.Logger,
+	password string,
 ) error {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
 
-	// loop as long as ctx is not cancelled
-	for ctx.Err() == nil {
-		// get a list of eligible liquidation targets
-		targets, err := getLiquidationTargets(ctx)
+	for {
+		select {
+		case <-ctx.Done():
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+
+		case <-ticker.C:
+			sweepLiquidations(ctx, cancelFunc, konfig, logger, password)
+		}
+	}
+}
+
+func sweepLiquidations(
+	ctx context.Context,
+	cancelFunc context.CancelFunc,
+	konfig *koanf.Koanf,
+	logger *zerolog.Logger,
+	password string,
+) {
+	// get a list of eligible liquidation targets
+	targets, err := getLiquidationTargets(ctx)
+	if err != nil {
+		logger.Err(err)
+		return
+	}
+
+	// iterate through  eligible liquidation targets
+	for _, target := range targets {
+		// select one reward denom and one repay denom to consider on target address
+		intent, ok, err := selectLiquidationDenoms(ctx, target)
+		if err != nil {
+			logger.Err(err)
+			continue
+		}
+		if !ok {
+			continue
+		}
+
+		// estimate actual liquidation outcome if chosen denoms were to be liquidated
+		estimate, err := estimateLiquidationOutcome(ctx, intent)
+		if err != nil {
+			logger.Err(err)
+			continue
+		}
+		// decide whether to liquidate based on estimated outcome
+		ok, err = decisionFunc(ctx, estimate)
+		if err != nil {
+			logger.Err(err)
+			continue
+		}
+		if !ok {
+			continue
+		}
+
+		// attempt liquidation if it was approved by decisionFunc
+		outcome, err := executeLiquidation(ctx, intent)
 		if err != nil {
 			logger.Err(err)
 			continue
 		}
 
-		for _, target := range targets {
-			if ctx.Err() == nil {
-				// select one reward denom and one repay denom to consider on target address
-				intent, ok, err := selectLiquidationDenoms(ctx, target)
-				if err != nil {
-					logger.Err(err)
-					continue
-				}
-				if !ok {
-					continue
-				}
-				// estimate actual liquidation outcome if chosen denoms were to be liquidated
-				estimate, err := estimateLiquidationOutcome(ctx, intent)
-				if err != nil {
-					logger.Err(err)
-					continue
-				}
-				// decide whether to liquidate based on estimated outcome
-				ok, err = decisionFunc(ctx, estimate)
-				if err != nil {
-					logger.Err(err)
-					continue
-				}
-				if !ok {
-					continue
-				}
-				// attempt liquidation if it was approved by decisionFunc
-				outcome, err := executeLiquidation(ctx, intent)
-				if err != nil {
-					logger.Err(err)
-					continue
-				}
-				logger.Info().Msgf(
-					"LIQUIDATION SUCCESS: target: %s repaid %s reward%s",
-					outcome.Addr.String(),
-					outcome.Repay.String(),
-					outcome.Reward.String(),
-				)
-			}
-		}
-
-		// Sleep at the end of each cycle
-		time.Sleep(time.Minute)
+		logger.Info().Msgf(
+			"LIQUIDATION SUCCESS: target: %s repaid %s reward%s",
+			outcome.Addr.String(),
+			outcome.Repay.String(),
+			outcome.Reward.String(),
+		)
 	}
-	return ctx.Err()
 }
 
 // return a list of potential liquidation targets, as

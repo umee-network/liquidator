@@ -15,20 +15,13 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/umee-network/liquidator/liquidator"
 )
 
 const (
-	envVariablePass = "UMEE_LIQUIDATOR_PASSWORD"
+	envVariablePass = "KEYRING_PASSPHRASE"
 	flagConfigPath  = "config"
-)
-
-var (
-	konfig   *koanf.Koanf
-	logger   *zerolog.Logger
-	password string
-
-	// TODO: Init and store various clients
-	// leverageClient client.LeverageClient
 )
 
 func NewRootCmd() *cobra.Command {
@@ -36,7 +29,7 @@ func NewRootCmd() *cobra.Command {
 		Use:   "umeeliqd",
 		Short: "umeeliqd runs a basic umee liquidator bot",
 		Long: `umeeliquidd runs a basic umee liquidator bot. Reads environment var
-LIQUIDATOR_PASSWORD on start as well as requiring a toml config file.`,
+KEYRING_PASSPHRASE on start as well as requiring a toml config file.`,
 		RunE: liquidatorCmdHandler,
 	}
 
@@ -59,17 +52,17 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	konfig, err = loadConfig(configPath)
+	konfig, err := loadConfig(configPath)
 	if err != nil {
 		return err
 	}
 
-	logger, err = getLogger(konfig)
+	logger, err := getLogger(konfig)
 	if err != nil {
 		return err
 	}
 
-	password, err = getPassword()
+	password, err := getPassword()
 	if err != nil {
 		return err
 	}
@@ -82,7 +75,7 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 
 	g.Go(func() error {
 		// returns on context cancelled
-		return startLiquidator(ctx, cancel)
+		return liquidator.StartLiquidator(ctx, cancel, konfig, logger, password)
 	})
 
 	// Block main process until all spawned goroutines have gracefully exited and
