@@ -10,9 +10,9 @@ import (
 
 var (
 	// Stored on start
-	konfig   *koanf.Koanf
-	logger   *zerolog.Logger
-	password string
+	konfig *koanf.Koanf
+	logger *zerolog.Logger
+	// password string
 
 	// Implementations can be replaced with mockups for testing
 
@@ -33,7 +33,7 @@ func StartLiquidator(
 	keyringPassword string,
 ) error {
 	logger = log
-	password = keyringPassword
+	// password = keyringPassword
 	konfig = config
 
 	if err := validateConfig(config); err != nil {

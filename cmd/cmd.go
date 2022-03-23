@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	envVariablePass = "KEYRING_PASSPHRASE"
+	envVariablePass = "KEYRING_PASSPHRASE" // nolint: gosec
 	flagConfigPath  = "config"
 	flagLogLevel    = "log-level"
 	flagLogFormat   = "log-format"
@@ -145,7 +145,7 @@ func getLogger(logLevel, logFormat string) (*zerolog.Logger, error) {
 // trapSignal will listen for any OS signal and invoke Done on the main
 // WaitGroup allowing the main process to gracefully exit.
 func trapSignal(cancel context.CancelFunc, logger *zerolog.Logger) {
-	sigCh := make(chan os.Signal)
+	sigCh := make(chan os.Signal, 1)
 
 	signal.Notify(sigCh, syscall.SIGTERM)
 	signal.Notify(sigCh, syscall.SIGINT)
