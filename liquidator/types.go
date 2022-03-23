@@ -28,7 +28,7 @@ type LiquidationOrder struct {
 type TargetFunc func(context.Context) ([]LiquidationTarget, error)
 
 // SelectFunc must convert a liquidation target to a desired liquidation order by selecting
-// reward and repay denominations. It should return false if no avilable liquidation is desired.
+// reward and repay denominations. It should return false if no available liquidation is desired.
 // The coin amounts in the returned order will be treated as maximum amounts in liquidation
 // outcome estimation and actual execution.
 type SelectFunc func(context.Context, LiquidationTarget) (LiquidationOrder, bool, error)

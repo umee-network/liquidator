@@ -75,14 +75,6 @@ install: go.sum
 build-linux: go.sum
 	LEDGER_ENABLED=false GOOS=linux GOARCH=amd64 $(MAKE) build
 
-go-mod-cache: go.sum
-	@echo "--> Download go modules to local cache"
-	@go mod download
-
-go.sum: go.mod
-	@echo "--> Ensure dependencies have not been modified"
-	@go mod verify
-
 clean:
 	@echo "--> Cleaning..."
 	@rm -rf $(BUILD_DIR)
@@ -94,8 +86,8 @@ clean:
 ###############################################################################
 
 test:
-  @echo "--> Running tests"
-  @go test ./...
+	@echo "--> Running tests"
+	@go test ./...
 
 .PHONY: test
 

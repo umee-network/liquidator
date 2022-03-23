@@ -14,7 +14,8 @@ var (
 	logger   *zerolog.Logger
 	password string
 
-	// Implementations can be swapped for custom liquidator bots or replaced with mockups for testing
+	// Implementations can be replaced with mockups for testing
+
 	GetLiquidationTargets      TargetFunc   = defaultGetLiquidationTargets
 	SelectLiquidationDenoms    SelectFunc   = defaultSelectLiquidationDenoms
 	EstimateLiquidationOutcome EstimateFunc = defaultEstimateLiquidationOutcome
@@ -24,10 +25,9 @@ var (
 
 // startLiquidator causes the liquidator to continuously look for liquidation targets, decide on which
 // borrowed and collateral denominations to attempt to liquidate, and attempt to execute any liquidations
-// whose estimated outcomes it approves of. Returns only when context is cancelled.
+// whose estimated outcomes it approves of. Returns only when context is canceled.
 func StartLiquidator(
 	ctx context.Context,
-	cancelFunc context.CancelFunc,
 	log *zerolog.Logger,
 	config *koanf.Koanf,
 	keyringPassword string,
@@ -51,14 +51,13 @@ func StartLiquidator(
 			}
 
 		case <-ticker.C:
-			sweepLiquidations(ctx, cancelFunc)
+			sweepLiquidations(ctx)
 		}
 	}
 }
 
 func sweepLiquidations(
 	ctx context.Context,
-	cancelFunc context.CancelFunc,
 ) {
 	// get a list of eligible liquidation targets
 	targets, err := GetLiquidationTargets(ctx)
@@ -127,7 +126,7 @@ func sweepLiquidations(
 		outcome, err := ExecuteLiquidation(ctx, intent)
 		if err != nil {
 			logger.Err(err).Str(
-				"target-addres",
+				"target-address",
 				intent.Addr.String(),
 			).Str(
 				"intended-repay",
@@ -140,7 +139,7 @@ func sweepLiquidations(
 		}
 
 		logger.Info().Str(
-			"target-addres",
+			"target-address",
 			outcome.Addr.String(),
 		).Str(
 			"repaid",

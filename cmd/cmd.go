@@ -86,8 +86,8 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 	trapSignal(cancel, logger)
 
 	g.Go(func() error {
-		// returns on context cancelled
-		return liquidator.StartLiquidator(ctx, cancel, logger, konfig, password)
+		// returns on context canceled
+		return liquidator.StartLiquidator(ctx, logger, konfig, password)
 	})
 
 	// Block main process until all spawned goroutines have gracefully exited and
@@ -129,12 +129,6 @@ func getLogger(logLevel, logFormat string) (*zerolog.Logger, error) {
 	logFmt := strings.ToLower(logFormat)
 
 	var logWriter io.Writer
-	if logFmt == "text" {
-		logWriter = zerolog.ConsoleWriter{Out: os.Stderr}
-	} else {
-		logWriter = os.Stderr
-	}
-
 	switch logFmt {
 	case "json":
 		logWriter = os.Stderr
@@ -149,9 +143,7 @@ func getLogger(logLevel, logFormat string) (*zerolog.Logger, error) {
 }
 
 // trapSignal will listen for any OS signal and invoke Done on the main
-// WaitGroup allowing the main process to gracefully exit. Uses the logger
-// stored in the liquidator, which may be updated by config file changes
-// during runtime.
+// WaitGroup allowing the main process to gracefully exit.
 func trapSignal(cancel context.CancelFunc, logger *zerolog.Logger) {
 	sigCh := make(chan os.Signal)
 
