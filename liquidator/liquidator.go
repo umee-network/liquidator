@@ -29,13 +29,14 @@ func StartLiquidator(
 	ctx context.Context,
 	cancelFunc context.CancelFunc,
 	log *zerolog.Logger,
-	configFilePath string,
+	config *koanf.Koanf,
 	keyringPassword string,
-) (err error) {
+) error {
 	logger = log
 	password = keyringPassword
+	konfig = config
 
-	if konfig, err = loadConfig(configFilePath); err != nil {
+	if err := validateConfig(config); err != nil {
 		return err
 	}
 
@@ -45,7 +46,7 @@ func StartLiquidator(
 	for {
 		select {
 		case <-ctx.Done():
-			if err = ctx.Err(); err != nil {
+			if err := ctx.Err(); err != nil {
 				return err
 			}
 

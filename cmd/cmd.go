@@ -9,6 +9,9 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/knadh/koanf"
+	"github.com/knadh/koanf/parsers/toml"
+	"github.com/knadh/koanf/providers/file"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -71,6 +74,11 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	konfig, err := loadConfig(configPath)
+	if err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -79,12 +87,25 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 
 	g.Go(func() error {
 		// returns on context cancelled
-		return liquidator.StartLiquidator(ctx, cancel, logger, configPath, password)
+		return liquidator.StartLiquidator(ctx, cancel, logger, konfig, password)
 	})
 
 	// Block main process until all spawned goroutines have gracefully exited and
 	// signal has been captured in the main process or if an error occurs.
 	return g.Wait()
+}
+
+// loadConfig returns a koanf configuration loaded from a specified filepath
+func loadConfig(path string) (*koanf.Koanf, error) {
+	var k = koanf.New(".")
+
+	// Load toml config from specified file path
+	f := file.Provider(path)
+	if err := k.Load(f, toml.Parser()); err != nil {
+		return nil, err
+	}
+
+	return k, nil
 }
 
 // getPassword reads the keyring password from an environment variable
