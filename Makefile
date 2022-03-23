@@ -3,11 +3,8 @@
 BRANCH         := $(shell git rev-parse --abbrev-ref HEAD)
 COMMIT         := $(shell git log -1 --format='%H')
 BUILD_DIR      ?= $(CURDIR)/build
-DIST_DIR       ?= $(CURDIR)/dist
 LEDGER_ENABLED ?= true
 TM_VERSION     := $(shell go list -m github.com/tendermint/tendermint | sed 's:.* ::')
-DOCKER         := $(shell which docker)
-PROJECT_NAME   = $(shell git remote get-url origin | xargs basename -s .git)
 
 ###############################################################################
 ##                                  Version                                  ##
@@ -88,7 +85,7 @@ go.sum: go.mod
 
 clean:
 	@echo "--> Cleaning..."
-	@rm -rf $(BUILD_DIR)  $(DIST_DIR)
+	@rm -rf $(BUILD_DIR)
 
 .PHONY: install build build-linux clean
 
@@ -96,29 +93,11 @@ clean:
 ##                              Tests & Linting                              ##
 ###############################################################################
 
-PACKAGES_UNIT=$(shell go list ./...)
-PACKAGES_E2E=$(shell go list ./... | grep '/e2e')
-TEST_PACKAGES=./...
-TEST_TARGETS := test-unit test-unit-cover test-race
+test:
+  @echo "--> Running tests"
+  @go test ./...
 
-test-unit: ARGS=-timeout=5m -tags='norace'
-test-unit: TEST_PACKAGES=$(PACKAGES_UNIT)
-test-unit-cover: ARGS=-timeout=5m -tags='norace' -coverprofile=coverage.txt -covermode=atomic
-test-unit-cover: TEST_PACKAGES=$(PACKAGES_UNIT)
-test-race: ARGS=-timeout=5m -race
-test-race: TEST_PACKAGES=$(PACKAGES_UNIT)
-$(TEST_TARGETS): run-tests
-
-run-tests:
-ifneq (,$(shell which tparse 2>/dev/null))
-	@echo "--> Running tests"
-	@go test -mod=readonly -json $(ARGS) $(TEST_PACKAGES) | tparse
-else
-	@echo "--> Running tests"
-	@go test -mod=readonly $(ARGS) $(TEST_PACKAGES)
-endif
-
-.PHONY: run-tests $(TEST_TARGETS)
+.PHONY: test
 
 lint:
 	@echo "--> Running linter"

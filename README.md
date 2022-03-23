@@ -3,16 +3,12 @@
 A basic liquidator tool for Umee's native leverage protocol.
 
 ```sh
-$ UMEE_LIQUIDATOR_PASSWORD=<KEYRING_PASSPHRASE> umeeliqd --config /path/to/config.toml
+$ UMEE_LIQUIDATOR_PASSWORD=<KEYRING_PASSPHRASE> umeeliqd --config /path/to/config.toml --log-level info --log-format text
 ```
 
 Uses a toml config file
 
 ```toml
-[log]
-level="info"
-format="text"
-
 [liquidator]
 wait="1m"
 ```

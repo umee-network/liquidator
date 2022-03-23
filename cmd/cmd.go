@@ -9,9 +9,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/knadh/koanf"
-	"github.com/knadh/koanf/parsers/toml"
-	"github.com/knadh/koanf/providers/file"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -22,6 +19,8 @@ import (
 const (
 	envVariablePass = "KEYRING_PASSPHRASE"
 	flagConfigPath  = "config"
+	flagLogLevel    = "log-level"
+	flagLogFormat   = "log-format"
 )
 
 func NewRootCmd() *cobra.Command {
@@ -34,6 +33,8 @@ KEYRING_PASSPHRASE on start as well as requiring a toml config file.`,
 	}
 
 	cmd.PersistentFlags().String(flagConfigPath, "umeeliqd.toml", "config file path")
+	cmd.PersistentFlags().String(flagLogLevel, "debug", "log level")
+	cmd.PersistentFlags().String(flagLogFormat, "json", "log format")
 	return cmd
 }
 
@@ -51,13 +52,16 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-
-	konfig, err := loadConfig(configPath)
+	logLevel, err := cmd.Flags().GetString(flagLogLevel)
+	if err != nil {
+		return err
+	}
+	logFormat, err := cmd.Flags().GetString(flagLogFormat)
 	if err != nil {
 		return err
 	}
 
-	logger, err := getLogger(konfig)
+	logger, err := getLogger(logLevel, logFormat)
 	if err != nil {
 		return err
 	}
@@ -75,7 +79,7 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 
 	g.Go(func() error {
 		// returns on context cancelled
-		return liquidator.StartLiquidator(ctx, cancel, konfig, logger, password)
+		return liquidator.StartLiquidator(ctx, cancel, logger, configPath, password)
 	})
 
 	// Block main process until all spawned goroutines have gracefully exited and
@@ -92,44 +96,31 @@ func getPassword() (string, error) {
 	return pass, nil
 }
 
-// loadConfig returns a koanf configuration loaded from a specified filepath
-func loadConfig(path string) (*koanf.Koanf, error) {
-	var k = koanf.New(".")
+// getLogger returns a zerolog logger with the given level and format. Log format
+// should be "json" or "text".
+func getLogger(logLevel, logFormat string) (*zerolog.Logger, error) {
 
-	// Load toml config from specified file path
-	f := file.Provider(path)
-	if err := k.Load(f, toml.Parser()); err != nil {
-		return nil, err
-	}
-
-	return k, nil
-}
-
-// getLogger returns a zerolog logger configured from the "log.level" and "log.format"
-// fields of a koanf config. Log format should be "json" or "text".
-func getLogger(konfig *koanf.Koanf) (*zerolog.Logger, error) {
-
-	logLvl, err := zerolog.ParseLevel(konfig.String("log.level"))
+	logLvl, err := zerolog.ParseLevel(logLevel)
 	if err != nil {
 		return nil, err
 	}
 
-	logFormat := strings.ToLower(konfig.String("log.format"))
+	logFmt := strings.ToLower(logFormat)
 
 	var logWriter io.Writer
-	if logFormat == "text" {
+	if logFmt == "text" {
 		logWriter = zerolog.ConsoleWriter{Out: os.Stderr}
 	} else {
 		logWriter = os.Stderr
 	}
 
-	switch logFormat {
+	switch logFmt {
 	case "json":
 		logWriter = os.Stderr
 	case "text":
 		logWriter = zerolog.ConsoleWriter{Out: os.Stderr}
 	default:
-		return nil, fmt.Errorf("invalid logging format: %s", logFormat)
+		return nil, fmt.Errorf("invalid logging format: %s", logFmt)
 	}
 
 	l := zerolog.New(logWriter).Level(logLvl).With().Timestamp().Logger()
