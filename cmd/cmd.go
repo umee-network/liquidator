@@ -95,7 +95,7 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 
 	g.Go(func() error {
 		// returns on context canceled
-		return liquidator.StartLiquidator(ctx, logger, password)
+		return liquidator.Start(ctx, logger, password)
 	})
 
 	// Block main process until all spawned goroutines have gracefully exited and
