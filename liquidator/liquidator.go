@@ -6,45 +6,40 @@ import (
 
 	"github.com/knadh/koanf"
 	"github.com/rs/zerolog"
+	"github.com/tendermint/tendermint/libs/sync"
 )
 
 var (
+	// Used by sweepLiquidations, Reconfigure, and Customize
+	lock sync.Mutex
+
 	// Stored on start
+	Cancel func()
 	konfig *koanf.Koanf
 	logger *zerolog.Logger
+	ticker *time.Ticker
+
 	// password string
-
-	// Implementations can be replaced with mockups for testing
-
-	GetLiquidationTargets      TargetFunc   = defaultGetLiquidationTargets
-	SelectLiquidationDenoms    SelectFunc   = defaultSelectLiquidationDenoms
-	EstimateLiquidationOutcome EstimateFunc = defaultEstimateLiquidationOutcome
-	ApproveLiquidation         ApproveFunc  = defaultApproveLiquidation
-	ExecuteLiquidation         ExecuteFunc  = defaultExecuteLiquidation
 )
 
-// startLiquidator causes the liquidator to continuously look for liquidation targets, decide on which
+// Start causes the liquidator to continuously look for liquidation targets, decide on which
 // borrowed and collateral denominations to attempt to liquidate, and attempt to execute any liquidations
 // whose estimated outcomes it approves of. Returns only when context is canceled.
-func StartLiquidator(
+func Start(
 	ctx context.Context,
 	log *zerolog.Logger,
-	config *koanf.Koanf,
 	keyringPassword string,
 ) error {
+	ctx, Cancel = context.WithCancel(ctx)
+
 	logger = log
 	// password = keyringPassword
-	konfig = config
-
-	if err := validateConfig(config); err != nil {
-		return err
-	}
 
 	// TODO: Create and start clients here. We need:
 	//	- umee node query client (e.g. QueryEligibleLiquidationTargets)
 	//	- umee node client with keyring (sign and submit MsgLiquidate)
 
-	ticker := time.NewTicker(konfig.Duration("liquidator.interval"))
+	ticker = time.NewTicker(time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -63,8 +58,17 @@ func StartLiquidator(
 func sweepLiquidations(
 	ctx context.Context,
 ) {
+	// prevents config file hot-reload during tick
+	lock.Lock()
+	defer lock.Unlock()
+
+	if konfig == nil || getLiquidationTargets == nil || selectLiquidationDenoms == nil || estimateLiquidationOutcome == nil || approveLiquidation == nil || executeLiquidation == nil {
+		logger.Error().Msg("nil implementation")
+		return
+	}
+
 	// get a list of eligible liquidation targets
-	targets, err := GetLiquidationTargets(ctx)
+	targets, err := getLiquidationTargets(ctx, konfig)
 	if err != nil {
 		logger.Err(err).Msg("get targets func failed")
 		return
@@ -73,7 +77,7 @@ func sweepLiquidations(
 	// iterate through  eligible liquidation targets
 	for _, target := range targets {
 		// select one reward denom and one repay denom to consider on target address
-		intent, ok, err := SelectLiquidationDenoms(ctx, target)
+		intent, ok, err := selectLiquidationDenoms(ctx, konfig, target)
 		if err != nil {
 			logger.Err(err).Str(
 				"target-address",
@@ -92,7 +96,7 @@ func sweepLiquidations(
 		}
 
 		// estimate actual liquidation outcome if chosen denoms were to be liquidated
-		estimate, err := EstimateLiquidationOutcome(ctx, intent)
+		estimate, err := estimateLiquidationOutcome(ctx, konfig, intent)
 		if err != nil {
 			logger.Err(err).Str(
 				"target-address",
@@ -108,7 +112,7 @@ func sweepLiquidations(
 		}
 
 		// decide whether to liquidate based on estimated outcome
-		ok, err = ApproveLiquidation(ctx, estimate)
+		ok, err = approveLiquidation(ctx, konfig, estimate)
 		if err != nil {
 			logger.Err(err).Str(
 				"target-address",
@@ -127,7 +131,7 @@ func sweepLiquidations(
 		}
 
 		// attempt liquidation if it was approved by decisionFunc
-		outcome, err := ExecuteLiquidation(ctx, intent)
+		outcome, err := executeLiquidation(ctx, konfig, intent)
 		if err != nil {
 			logger.Err(err).Str(
 				"target-address",

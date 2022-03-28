@@ -26,6 +26,11 @@ const (
 	flagLogFormat   = "log-format"
 )
 
+var (
+	logger     *zerolog.Logger
+	configFile *file.File
+)
+
 func NewRootCmd() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "umeeliqd",
@@ -67,17 +72,17 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	logger, err := getLogger(logLevel, logFormat)
+	logger, err = getLogger(logLevel, logFormat)
 	if err != nil {
 		return err
 	}
+
+	// load config file, then watch to reload on changes
+	configFile = file.Provider(configPath)
+	reloadConfig(struct{}{}, nil)
+	configFile.Watch(reloadConfig)
 
 	password, err := getPassword()
-	if err != nil {
-		return err
-	}
-
-	konfig, err := loadConfig(configPath)
 	if err != nil {
 		return err
 	}
@@ -90,7 +95,7 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 
 	g.Go(func() error {
 		// returns on context canceled
-		return liquidator.StartLiquidator(ctx, logger, konfig, password)
+		return liquidator.StartLiquidator(ctx, logger, password)
 	})
 
 	// Block main process until all spawned goroutines have gracefully exited and
@@ -98,17 +103,26 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 	return g.Wait()
 }
 
-// loadConfig returns a koanf configuration loaded from a specified filepath
-func loadConfig(path string) (*koanf.Koanf, error) {
-	var k = koanf.New(".")
-
-	// Load toml config from specified file path
-	f := file.Provider(path)
-	if err := k.Load(f, toml.Parser()); err != nil {
-		return nil, err
+// reloadConfig is called by koanf file watcher, for which event is always nil
+func reloadConfig(event interface{}, err error) {
+	if err != nil {
+		logger.Err(err).Msg("config file watch error")
+		return
 	}
 
-	return k, nil
+	logger.Info().Msg("config changed. Reloading ...")
+
+	// Load config from file path
+	var k = koanf.New(".")
+	if err := k.Load(configFile, toml.Parser()); err != nil {
+		logger.Err(err).Msg("config file load error")
+	}
+
+	// Send the config file to liquidator, which will update
+	// if ValidateConfig(k) also passes
+	if err := liquidator.Reconfigure(k); err != nil {
+		logger.Err(err).Msg("error validating config")
+	}
 }
 
 // getPassword reads the keyring password from an environment variable
