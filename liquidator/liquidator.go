@@ -40,6 +40,10 @@ func StartLiquidator(
 		return err
 	}
 
+	// TODO: Create and start clients here. We need:
+	//	- umee node query client (e.g. QueryEligibleLiquidationTargets)
+	//	- umee node client with keyring (sign and submit MsgLiquidate)
+
 	ticker := time.NewTicker(konfig.Duration("liquidator.interval"))
 	defer ticker.Stop()
 

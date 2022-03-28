@@ -3,8 +3,6 @@
 BRANCH         := $(shell git rev-parse --abbrev-ref HEAD)
 COMMIT         := $(shell git log -1 --format='%H')
 BUILD_DIR      ?= $(CURDIR)/build
-LEDGER_ENABLED ?= true
-TM_VERSION     := $(shell go list -m github.com/tendermint/tendermint | sed 's:.* ::')
 
 ###############################################################################
 ##                                  Version                                  ##
@@ -22,64 +20,31 @@ endif
 ##                                   Build                                   ##
 ###############################################################################
 
-build_tags = netgo
+ldflags = -X github.com/umee-network/liquidator/cmd.Version=$(VERSION) \
+		  -X github.com/umee-network/liquidator/cmd.Commit=$(COMMIT)
 
-ifeq ($(LEDGER_ENABLED),true)
-  ifeq ($(OS),Windows_NT)
-    GCCEXE = $(shell where gcc.exe 2> NUL)
-    ifeq ($(GCCEXE),)
-      $(error gcc.exe not installed for ledger support, please install or set LEDGER_ENABLED=false)
-    else
-      build_tags += ledger
-    endif
-  else
-    UNAME_S = $(shell uname -s)
-    ifeq ($(UNAME_S),OpenBSD)
-      $(warning OpenBSD detected, disabling ledger support (https://github.com/cosmos/cosmos-sdk/issues/1988))
-    else
-      GCC = $(shell command -v gcc 2> /dev/null)
-      ifeq ($(GCC),)
-        $(error gcc not installed for ledger support, please install or set LEDGER_ENABLED=false)
-      else
-        build_tags += ledger
-      endif
-    endif
-  endif
-endif
-
-whitespace :=
-whitespace += $(whitespace)
-comma := ,
-build_tags_comma_sep := $(subst $(whitespace),$(comma),$(build_tags))
-
-ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=umeeliq \
-		  -X github.com/cosmos/cosmos-sdk/version.AppName=umeeliqd \
-		  -X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
-		  -X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
-		  -X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags_comma_sep)" \
-		  -X github.com/tendermint/tendermint/version.TMCoreSemVer=$(TM_VERSION)
-
-ldflags += $(LDFLAGS)
-ldflags := $(strip $(ldflags))
-
-BUILD_FLAGS := -tags "$(build_tags)" -ldflags '$(ldflags)'
-
-build: go.sum
-	@echo "--> Building..."
-	go build -mod=readonly $(BUILD_FLAGS) -o $(BUILD_DIR)/ ./...
+BUILD_FLAGS := -ldflags '$(ldflags)'
 
 install: go.sum
 	@echo "--> Installing..."
 	go install -mod=readonly $(BUILD_FLAGS) ./...
 
+build: go.sum
+	@echo "--> Building..."
+	go build -mod=readonly -o $(BUILD_DIR)/ $(BUILD_FLAGS) ./...
+
 build-linux: go.sum
-	LEDGER_ENABLED=false GOOS=linux GOARCH=amd64 $(MAKE) build
+	GOOS=linux GOARCH=amd64 $(MAKE) build
+
+go.sum:
+	@echo "--> Ensure dependencies have not been modified"
+	@go mod verify
 
 clean:
 	@echo "--> Cleaning..."
 	@rm -rf $(BUILD_DIR)
 
-.PHONY: install build build-linux clean
+.PHONY: install build build-linux clean go.sum
 
 ###############################################################################
 ##                              Tests & Linting                              ##

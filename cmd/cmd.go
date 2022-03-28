@@ -37,7 +37,10 @@ KEYRING_PASSPHRASE on start as well as requiring a toml config file.`,
 
 	cmd.PersistentFlags().String(flagConfigPath, "umeeliqd.toml", "config file path")
 	cmd.PersistentFlags().String(flagLogLevel, "debug", "log level")
-	cmd.PersistentFlags().String(flagLogFormat, "json", "log format")
+	cmd.PersistentFlags().String(flagLogFormat, "text", "log format (text|json)")
+
+	cmd.AddCommand(getVersionCmd())
+
 	return cmd
 }
 
