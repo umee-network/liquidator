@@ -29,7 +29,7 @@ var baseTargetFunc types.TargetFunc = func(
 	return nil, nil
 }
 
-// validateBaseTargetConfig is the config file validator associated with BaseTargetFunc
+// validateBaseTargetConfig is the config file validator associated with baseTargetFunc
 func validateBaseTargetConfig(k *koanf.Koanf) error {
 	return nil
 }
@@ -69,7 +69,7 @@ reward:
 	return order, true, nil
 }
 
-// validateBaseSelectConfig is the config file validator associated with BaseSelectFunc
+// validateBaseSelectConfig is the config file validator associated with baseSelectFunc
 func validateBaseSelectConfig(k *koanf.Koanf) error {
 	repays := k.Strings(keySelectRepayDenoms)
 	if len(repays) == 0 {
@@ -91,19 +91,21 @@ var baseEstimateFunc types.EstimateFunc = func(ctx context.Context, k *koanf.Koa
 	return types.LiquidationOrder{}, nil
 }
 
-// validateBaseEstimateConfig is the config file validator associated with BaseEstimateFunc
+// validateBaseEstimateConfig is the config file validator associated with baseEstimateFunc
 func validateBaseEstimateConfig(k *koanf.Koanf) error {
 	return nil
 }
 
-// baseApproveFunc decides whether an estimated liquidation outcome is worth it
+// baseApproveFunc approves all nonzero estimated liquidation outcomes.
 var baseApproveFunc types.ApproveFunc = func(ctx context.Context, k *koanf.Koanf, estimate types.LiquidationOrder,
 ) (bool, error) {
-	// TODO: body
+	if estimate.Reward.IsPositive() {
+		return true, nil
+	}
 	return false, nil
 }
 
-// validateBaseApproveConfig is the config file validator associated with BaseEstimateFunc
+// validateBaseApproveConfig is the config file validator associated with baseApproveFunc
 func validateBaseApproveConfig(k *koanf.Koanf) error {
 	return nil
 }
@@ -116,7 +118,7 @@ var baseExecuteFunc types.ExecuteFunc = func(ctx context.Context, k *koanf.Koanf
 	return types.LiquidationOrder{}, nil
 }
 
-// validateBaseExecuteConfig is the config file validator associated with BaseEstimateFunc
+// validateBaseExecuteConfig is the config file validator associated with baseExecuteFunc
 func validateBaseExecuteConfig(k *koanf.Koanf) error {
 	return nil
 }
