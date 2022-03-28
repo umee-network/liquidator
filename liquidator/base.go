@@ -35,17 +35,9 @@ func validateBaseTargetConfig(k *koanf.Koanf) error {
 }
 
 // baseSelectFunc receives a LiquidationTarget indicating a single borrower's
-// address, borrows, and collateral. From there it should decide what borrow
-// denominations the liquidator is interested in repaying, and what collateral
-// rewards it wants to receive. For example, a liquidation target with three
-// borrowed denominations and two collateral denominations will have six possible
-// combinations of (repay denom, reward denom) that could be made into liquidation
-// orders. The liquidator may not possess every repayment denom, or be interested
-// in every collateral denom. Furthermore, if one liquidation brings the borrower
-// back to health, then the remaining ones will no longer be available. The
-// defaultSelectFunc function should choose the reward and repay denoms from
-// available options. Also returns a boolean, which can be set to false if no
-// workable denominations were discovered.
+// address, borrows, and collateral, and returns preferred reward and repay denoms.
+// chooses via simple order or priority using slices of denoms set in the config
+// file.
 var baseSelectFunc types.SelectFunc = func(ctx context.Context, k *koanf.Koanf, target types.LiquidationTarget,
 ) (types.LiquidationOrder, bool, error) {
 	order := types.LiquidationOrder{Addr: target.Addr}
