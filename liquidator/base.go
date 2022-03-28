@@ -2,6 +2,7 @@ package liquidator
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/knadh/koanf"
 
@@ -9,8 +10,14 @@ import (
 )
 
 const (
-	keyDisableTargeting = "targeting.disable"
+	keySelectRepayDenoms  = "select.repay_denoms"
+	keySelectRewardDenoms = "select.reward_denoms"
 )
+
+func errInvalidConfig(k *koanf.Koanf, key string) error {
+	val := k.String(key)
+	return fmt.Errorf("invalid %s: %s", key, val)
+}
 
 // baseTargetFunc queries the chain for all eligible liquidation
 // targets and their total borrowed and collateral, converting collateral uTokens
@@ -18,17 +25,12 @@ const (
 var baseTargetFunc types.TargetFunc = func(
 	ctx context.Context, k *koanf.Koanf,
 ) ([]types.LiquidationTarget, error) {
-	if k.Bool(keyDisableTargeting) {
-		return nil, nil
-	}
-
 	// TODO: body
 	return nil, nil
 }
 
 // validateBaseTargetConfig is the config file validator associated with BaseTargetFunc
 func validateBaseTargetConfig(k *koanf.Koanf) error {
-	_ = k.Bool(keyDisableTargeting)
 	return nil
 }
 
@@ -46,12 +48,45 @@ func validateBaseTargetConfig(k *koanf.Koanf) error {
 // workable denominations were discovered.
 var baseSelectFunc types.SelectFunc = func(ctx context.Context, k *koanf.Koanf, target types.LiquidationTarget,
 ) (types.LiquidationOrder, bool, error) {
-	// TODO: body
-	return types.LiquidationOrder{}, false, nil
+	order := types.LiquidationOrder{Addr: target.Addr}
+
+repay:
+	for _, r := range k.Strings(keySelectRepayDenoms) {
+		for _, b := range target.Borrowed {
+			if b.Denom == r {
+				order.Repay = b
+				break repay
+			}
+		}
+	}
+
+reward:
+	for _, r := range k.Strings(keySelectRewardDenoms) {
+		for _, c := range target.Collateral {
+			if c.Denom == r {
+				order.Reward = c
+				break reward
+			}
+		}
+	}
+
+	if order.Repay.IsZero() || order.Reward.IsZero() {
+		return types.LiquidationOrder{}, false, nil
+	}
+
+	return order, true, nil
 }
 
 // validateBaseSelectConfig is the config file validator associated with BaseSelectFunc
 func validateBaseSelectConfig(k *koanf.Koanf) error {
+	repays := k.Strings(keySelectRepayDenoms)
+	if len(repays) == 0 {
+		return errInvalidConfig(k, keySelectRepayDenoms)
+	}
+	rewards := k.Strings(keySelectRewardDenoms)
+	if len(rewards) == 0 {
+		return errInvalidConfig(k, keySelectRewardDenoms)
+	}
 	return nil
 }
 

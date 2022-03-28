@@ -10,10 +10,9 @@ import (
 )
 
 var (
-	// Used by sweepLiquidations, Reconfigure, and Customize
+	// lock used by sweepLiquidations, Reconfigure, and Customize
 	lock sync.Mutex
 
-	// Stored on start
 	Cancel func()
 	konfig *koanf.Koanf
 	logger *zerolog.Logger
@@ -61,11 +60,6 @@ func sweepLiquidations(
 	// prevents config file hot-reload during tick
 	lock.Lock()
 	defer lock.Unlock()
-
-	if konfig == nil || getLiquidationTargets == nil || selectLiquidationDenoms == nil || estimateLiquidationOutcome == nil || approveLiquidation == nil || executeLiquidation == nil {
-		logger.Error().Msg("nil implementation")
-		return
-	}
 
 	// get a list of eligible liquidation targets
 	targets, err := getLiquidationTargets(ctx, konfig)

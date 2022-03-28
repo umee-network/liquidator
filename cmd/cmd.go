@@ -80,7 +80,10 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 	// load config file, then watch to reload on changes
 	configFile = file.Provider(configPath)
 	reloadConfig(struct{}{}, nil)
-	configFile.Watch(reloadConfig)
+	err = configFile.Watch(reloadConfig)
+	if err != nil {
+		return err
+	}
 
 	password, err := getPassword()
 	if err != nil {
