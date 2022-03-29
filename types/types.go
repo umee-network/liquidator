@@ -33,8 +33,11 @@ type TargetFunc func(context.Context, *koanf.Koanf) ([]LiquidationTarget, error)
 
 // SelectFunc must convert a liquidation target to a desired liquidation order by selecting
 // reward and repay denominations. It should return false if no available liquidation is desired.
-// The coin amounts in the returned order will be treated as maximum amounts in liquidation
-// outcome estimation and actual execution.
+// The repay amount in the returned order will be treated as a maximum amount in liquidation
+// outcome estimation and actual execution. The reward amount is used to derive a minimum ratio
+// of liquidation reward to repayment in their base denoms, independent of oracle exchange rates,
+// that will abort the liquidation if not met. Base behavior sets reward amount to zero, to bypass
+// the user-set limit and trust oracle exchange rates from the chain.
 type SelectFunc func(context.Context, *koanf.Koanf, LiquidationTarget) (LiquidationOrder, bool, error)
 
 // EstimateFunc must take a liquidation order representing the liquidator's intent
@@ -46,7 +49,7 @@ type EstimateFunc func(context.Context, *koanf.Koanf, LiquidationOrder) (Liquida
 // of a transaction, and return true if the order should be executed.
 type ApproveFunc func(context.Context, *koanf.Koanf, LiquidationOrder) (bool, error)
 
-// ExecuteFunc must take a liquidation order an execute it on the blockchain. The
+// ExecuteFunc must take a liquidation order and executes it on the blockchain. The
 // input order should represent the liquidator's intent (not the potentially
 // lower estimated outcome). Returns the actual reward and repayment amounts.
 type ExecuteFunc func(context.Context, *koanf.Koanf, LiquidationOrder) (LiquidationOrder, error)

@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	// Implementations can be replaced with mockups for testing
+	// Implementations can be replaced with custom functions or mockups for testing
 
 	getLiquidationTargets      types.TargetFunc   = baseTargetFunc
 	selectLiquidationDenoms    types.SelectFunc   = baseSelectFunc

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/knadh/koanf"
 
 	types "github.com/umee-network/liquidator/types"
@@ -37,7 +38,8 @@ func validateBaseTargetConfig(k *koanf.Koanf) error {
 // baseSelectFunc receives a LiquidationTarget indicating a single borrower's
 // address, borrows, and collateral, and returns preferred reward and repay denoms.
 // chooses via simple order or priority using slices of denoms set in the config
-// file.
+// file. sets reward amount to zero, which opts out of a user-enforced minimum ratio
+// of reward:repay and trusts the module's oracle.
 var baseSelectFunc types.SelectFunc = func(ctx context.Context, k *koanf.Koanf, target types.LiquidationTarget,
 ) (types.LiquidationOrder, bool, error) {
 	order := types.LiquidationOrder{Addr: target.Addr}
@@ -57,6 +59,7 @@ reward:
 		for _, c := range target.Collateral {
 			if c.Denom == r {
 				order.Reward = c
+				order.Reward.Amount = sdk.ZeroInt()
 				break reward
 			}
 		}
