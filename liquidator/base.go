@@ -27,6 +27,11 @@ var baseTargetFunc types.TargetFunc = func(
 	ctx context.Context, k *koanf.Koanf,
 ) ([]types.LiquidationTarget, error) {
 	// TODO: body
+	// - init/reconnect query client if failed last time
+	// - use QueryEligibleLiquidationTargets to get a list of addresses
+	// - use GetBorrowed and GetCollateral on each address
+	// - return the info as []LiquidationTarget
+	// - (error on any query failing)
 	return nil, nil
 }
 
@@ -91,6 +96,9 @@ func validateBaseSelectConfig(k *koanf.Koanf) error {
 var baseEstimateFunc types.EstimateFunc = func(ctx context.Context, k *koanf.Koanf, intent types.LiquidationOrder,
 ) (types.LiquidationOrder, error) {
 	// TODO: body
+	// - use oracle query client, query required exchange rates
+	// - use as-of-yet nonexistent estimate liquidation outcome function from x/leverage/types
+	//   (that, or create the function here and avoid moving it to types in the actual module)
 	return types.LiquidationOrder{}, nil
 }
 
@@ -118,6 +126,8 @@ func validateBaseApproveConfig(k *koanf.Koanf) error {
 var baseExecuteFunc types.ExecuteFunc = func(ctx context.Context, k *koanf.Koanf, intent types.LiquidationOrder,
 ) (types.LiquidationOrder, error) {
 	// TODO: body
+	// - use keyring-enabled client to send a MsgLiquidate with fields from input "intent"
+	// - get the MsgLiquidateResponse and return a LiquidationOrder struct with reward and repaid amounts
 	return types.LiquidationOrder{}, nil
 }
 
