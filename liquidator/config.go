@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	keyWait = "liquidator.wait"
+	ConfigKeyWait = "liquidator.wait"
 )
 
 // Reconfigure validates an incoming config file, updating liquidator's internal config if it is valid,
@@ -38,16 +38,18 @@ func Reconfigure(k *koanf.Koanf) error {
 
 	// Update config file and reset the ticker controlling the main loop
 	konfig = k
-	ticker.Reset(konfig.Duration("liquidator.interval"))
+	if ticker != nil {
+		ticker.Reset(konfig.Duration("liquidator.interval"))
+	}
 	return nil
 }
 
 // baseValidateConfig validates config fields that are not associated with swappable steps in the
 // liquidation sweep
 func baseValidateConfig(k *koanf.Koanf) error {
-	interval := k.Duration(keyWait)
+	interval := k.Duration(ConfigKeyWait)
 	if interval < time.Second {
-		return fmt.Errorf("%s must be a nonzero duration longer than 1s", keyWait)
+		return fmt.Errorf("%s must be a nonzero duration longer than 1s", ConfigKeyWait)
 	}
 	return nil
 }

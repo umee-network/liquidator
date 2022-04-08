@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	keySelectRepayDenoms  = "select.repay_denoms"
-	keySelectRewardDenoms = "select.reward_denoms"
+	ConfigKeySelectRepayDenoms  = "liquidator.select.repay_denoms"
+	ConfigKeySelectRewardDenoms = "liquidator.select.reward_denoms"
 )
 
 func errInvalidConfig(k *koanf.Koanf, key string) error {
@@ -50,7 +50,7 @@ var baseSelectFunc types.SelectFunc = func(ctx context.Context, k *koanf.Koanf, 
 	order := types.LiquidationOrder{Addr: target.Addr}
 
 repay:
-	for _, r := range k.Strings(keySelectRepayDenoms) {
+	for _, r := range k.Strings(ConfigKeySelectRepayDenoms) {
 		for _, b := range target.Borrowed {
 			if b.Denom == r {
 				order.Repay = b
@@ -60,7 +60,7 @@ repay:
 	}
 
 reward:
-	for _, r := range k.Strings(keySelectRewardDenoms) {
+	for _, r := range k.Strings(ConfigKeySelectRewardDenoms) {
 		for _, c := range target.Collateral {
 			if c.Denom == r {
 				order.Reward = c
@@ -70,7 +70,7 @@ reward:
 		}
 	}
 
-	if order.Repay.IsZero() || order.Reward.IsZero() {
+	if order.Repay.Denom == "" || order.Reward.Denom == "" {
 		return types.LiquidationOrder{}, false, nil
 	}
 
@@ -79,13 +79,13 @@ reward:
 
 // validateBaseSelectConfig is the config file validator associated with baseSelectFunc
 func validateBaseSelectConfig(k *koanf.Koanf) error {
-	repays := k.Strings(keySelectRepayDenoms)
+	repays := k.Strings(ConfigKeySelectRepayDenoms)
 	if len(repays) == 0 {
-		return errInvalidConfig(k, keySelectRepayDenoms)
+		return errInvalidConfig(k, ConfigKeySelectRepayDenoms)
 	}
-	rewards := k.Strings(keySelectRewardDenoms)
+	rewards := k.Strings(ConfigKeySelectRewardDenoms)
 	if len(rewards) == 0 {
-		return errInvalidConfig(k, keySelectRewardDenoms)
+		return errInvalidConfig(k, ConfigKeySelectRewardDenoms)
 	}
 	return nil
 }
@@ -110,6 +110,15 @@ func validateBaseEstimateConfig(k *koanf.Koanf) error {
 // baseApproveFunc approves all nonzero estimated liquidation outcomes.
 var baseApproveFunc types.ApproveFunc = func(ctx context.Context, k *koanf.Koanf, estimate types.LiquidationOrder,
 ) (bool, error) {
+	if estimate.Addr.Empty() {
+		return false, fmt.Errorf("empty address")
+	}
+	if err := estimate.Repay.Validate(); err != nil {
+		return false, err
+	}
+	if err := estimate.Reward.Validate(); err != nil {
+		return false, err
+	}
 	if estimate.Reward.IsPositive() {
 		return true, nil
 	}

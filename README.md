@@ -11,6 +11,15 @@ Uses a toml config file
 ```toml
 [liquidator]
 wait="1m"
+
+[liquidator.select]
+reward_denoms=[
+  "uumee",
+  "ibc/0000000000000000000000000000000000000000000000000000000000000000"
+]
+repay_denoms=[
+  "uumee"
+]
 ```
 
 ## Install
