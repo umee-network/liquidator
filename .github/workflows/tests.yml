@@ -44,12 +44,7 @@ jobs:
             **/**.go
             go.mod
             go.sum
-      - name: Test and Create Coverage Report
+      - name: Test
         run: |
           make test
-        if: env.GIT_DIFF
-      - uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.txt
-          fail_ci_if_error: true
         if: env.GIT_DIFF
