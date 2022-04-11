@@ -26,8 +26,7 @@ const (
 	umeeDenom = "uumee"
 )
 
-var (
-	configBytes = []byte(`
+var configBytes = []byte(`
 	[liquidator]
 	wait="1s"
 	
@@ -40,7 +39,6 @@ var (
 	  "uumee"
 	]
 	`)
-)
 
 type IntegrationTestSuite struct {
 	suite.Suite

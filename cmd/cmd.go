@@ -32,7 +32,7 @@ var (
 )
 
 func NewRootCmd() *cobra.Command {
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "umeeliqd",
 		Short: "umeeliqd runs a basic umee liquidator bot",
 		Long: `umeeliquidd runs a basic umee liquidator bot. Reads environment var
@@ -116,7 +116,7 @@ func reloadConfig(event interface{}, err error) {
 	logger.Info().Msg("config changed. Reloading ...")
 
 	// Load config from file path
-	var k = koanf.New(".")
+	k := koanf.New(".")
 	if err := k.Load(configFile, toml.Parser()); err != nil {
 		logger.Err(err).Msg("config file load error")
 	}
@@ -140,7 +140,6 @@ func getPassword() (string, error) {
 // getLogger returns a zerolog logger with the given level and format. Log format
 // should be "json" or "text".
 func getLogger(logLevel, logFormat string) (*zerolog.Logger, error) {
-
 	logLvl, err := zerolog.ParseLevel(logLevel)
 	if err != nil {
 		return nil, err
