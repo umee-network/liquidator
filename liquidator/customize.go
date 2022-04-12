@@ -52,6 +52,13 @@ func Customize(
 		vfs = append(vfs, validateDefaultExecuteConfig)
 	}
 
+	// after Customize releases its lock, Reconfigure will run the new validateConfigFuncs
+	defer func() {
+		if err := Reconfigure(konfig); err != nil {
+			logger.Err(err).Msg("config validate on Customize")
+		}
+	}()
+
 	// wait until any current ticks or hot config reloads are done
 	lock.Lock()
 	defer lock.Unlock()
