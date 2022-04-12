@@ -28,6 +28,7 @@ To install the `umeeliqd` binary:
 
 ```shell
 $ make install
+```
 
 ## Behavior
 
