@@ -27,7 +27,7 @@ repay_denoms=[
 To install the `umeeliqd` binary:
 
 ```shell
-$ make install
+make install
 ```
 
 ## Behavior
