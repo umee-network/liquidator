@@ -40,9 +40,9 @@ When launched, `umeeliqd` performs the following:
 
 The main loop of `umeeliqd` repeats the following steps:
 
-- Retrieves a list of eligible liquidation targets (addresses) from the Umee network:
+- `TargetFunc` Retrieves a list of eligible liquidation targets (addresses) from the Umee network:
 - Iterates over each target:
-  - Selects the preferred reward and repayment denom present in the target.
-  - Simulates the result of liquidation using `x/leverage` parameters.
-  - Decides whether or not to attempt the liquidation based on estimated rewards.
-  - Attempts to execute the liquidation.
+  - `SelectFunc` Selects the preferred reward and repayment denom present in the target.
+  - `EstimateFunc` Simulates the result of liquidation using `x/leverage` parameters.
+  - `ApproveFunc` Decides whether or not to attempt the liquidation based on estimated rewards.
+  - `ExecuteFunc` Attempts to execute the liquidation.

@@ -32,7 +32,7 @@ KEYRING_PASSPHRASE on start as well as requiring a toml config file.`,
 		RunE: liquidatorCmdHandler,
 	}
 
-	cmd.PersistentFlags().String(flagConfigPath, "path/to/umeeliqd.toml", "config file path")
+	cmd.PersistentFlags().String(flagConfigPath, "/path/to/config.toml", "config file path")
 	cmd.PersistentFlags().String(flagLogLevel, "debug", "log level")
 	cmd.PersistentFlags().String(flagLogFormat, "text", "log format (text|json)")
 
