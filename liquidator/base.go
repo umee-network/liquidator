@@ -42,9 +42,9 @@ func validateBaseTargetConfig(k *koanf.Koanf) error {
 
 // baseSelectFunc receives a LiquidationTarget indicating a single borrower's
 // address, borrows, and collateral, and returns preferred reward and repay denoms.
-// chooses via simple order or priority using slices of denoms set in the config
-// file. sets reward amount to zero, which opts out of a user-enforced minimum ratio
-// of reward:repay and trusts the module's oracle.
+// It chooses via simple order or priority using slices of denoms set in the config
+// file, Then sets reward amount to zero, which opts out of a user-enforced minimum ratio
+// of reward:repay, and trusts the module's oracle.
 var baseSelectFunc types.SelectFunc = func(ctx context.Context, k *koanf.Koanf, target types.LiquidationTarget,
 ) (types.LiquidationOrder, bool, error) {
 	order := types.LiquidationOrder{Addr: target.Addr}
@@ -77,7 +77,7 @@ reward:
 	return order, true, nil
 }
 
-// validateBaseSelectConfig is the config file validator associated with baseSelectFunc
+// validateBaseSelectConfig is the config file validator associated with baseSelectFunc.
 func validateBaseSelectConfig(k *koanf.Koanf) error {
 	repays := k.Strings(ConfigKeySelectRepayDenoms)
 	if len(repays) == 0 {

@@ -106,7 +106,7 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 	return g.Wait()
 }
 
-// reloadConfig is called by koanf file watcher, for which event is always nil
+// reloadConfig is called by koanf file watcher, for which event is always nil.
 func reloadConfig(event interface{}, err error) {
 	if err != nil {
 		logger.Err(err).Msg("config file watch error")
@@ -115,20 +115,19 @@ func reloadConfig(event interface{}, err error) {
 
 	logger.Info().Msg("config changed. Reloading ...")
 
-	// Load config from file path
 	k := koanf.New(".")
 	if err := k.Load(configFile, toml.Parser()); err != nil {
 		logger.Err(err).Msg("config file load error")
 	}
 
 	// Send the config file to liquidator, which will update
-	// if ValidateConfig(k) also passes
+	// if ValidateConfig(k) also passes.
 	if err := liquidator.Reconfigure(k); err != nil {
 		logger.Err(err).Msg("error validating config")
 	}
 }
 
-// getPassword reads the keyring password from an environment variable
+// getPassword reads the keyring password from an environment variable.
 func getPassword() (string, error) {
 	pass := os.Getenv(envVariablePass)
 	if pass == "" {
