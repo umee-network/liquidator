@@ -7,11 +7,11 @@ import (
 var (
 	// Implementations can be replaced with custom functions or mockups for testing
 
-	getLiquidationTargets      types.TargetFunc   = baseTargetFunc
-	selectLiquidationDenoms    types.SelectFunc   = baseSelectFunc
-	estimateLiquidationOutcome types.EstimateFunc = baseEstimateFunc
-	approveLiquidation         types.ApproveFunc  = baseApproveFunc
-	executeLiquidation         types.ExecuteFunc  = baseExecuteFunc
+	getLiquidationTargets      types.TargetFunc   = defaultTargetFunc
+	selectLiquidationDenoms    types.SelectFunc   = defaultSelectFunc
+	estimateLiquidationOutcome types.EstimateFunc = defaultEstimateFunc
+	approveLiquidation         types.ApproveFunc  = defaultApproveFunc
+	executeLiquidation         types.ExecuteFunc  = defaultExecuteFunc
 
 	// validateConfigFuncs will be called in order upon reloading config file. Custom
 	// liquidators which require new parameters to be in the config file should add
@@ -30,26 +30,26 @@ func Customize(
 	// add base config validate func
 	vfs = append(vfs, baseValidateConfig)
 
-	// nil inputs default to base implementations
+	// nil inputs specify default implementations
 	if tf == nil {
-		tf = &baseTargetFunc
-		vfs = append(vfs, validateBaseTargetConfig)
+		tf = &defaultTargetFunc
+		vfs = append(vfs, validateDefaultTargetConfig)
 	}
 	if sf == nil {
-		sf = &baseSelectFunc
-		vfs = append(vfs, validateBaseSelectConfig)
+		sf = &defaultSelectFunc
+		vfs = append(vfs, validateDefaultSelectConfig)
 	}
 	if ef == nil {
-		ef = &baseEstimateFunc
-		vfs = append(vfs, validateBaseEstimateConfig)
+		ef = &defaultEstimateFunc
+		vfs = append(vfs, validateDefaultEstimateConfig)
 	}
 	if af == nil {
-		af = &baseApproveFunc
-		vfs = append(vfs, validateBaseApproveConfig)
+		af = &defaultApproveFunc
+		vfs = append(vfs, validateDefaultApproveConfig)
 	}
 	if xf == nil {
-		xf = &baseExecuteFunc
-		vfs = append(vfs, validateBaseExecuteConfig)
+		xf = &defaultExecuteFunc
+		vfs = append(vfs, validateDefaultExecuteConfig)
 	}
 
 	// wait until any current ticks or hot config reloads are done

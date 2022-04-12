@@ -21,7 +21,7 @@ func Reconfigure(k *koanf.Koanf) error {
 	defer lock.Unlock()
 
 	// Collect all validate functions that need to be called. Automatically add baseValidateConfig
-	// and validate funcs for base liquidation step implementations, so that ValidateConfigFuncs
+	// and validate funcs for default liquidation step implementations, so that ValidateConfigFuncs
 	// explicitly added only need to cover steps that have been replaced with custom implementations.
 	validateFuncs := []types.ValidateFunc{baseValidateConfig}
 	validateFuncs = append(validateFuncs, validateConfigFuncs...)

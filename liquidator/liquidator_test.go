@@ -1,10 +1,5 @@
 package liquidator
 
-// TODO: We can test individual base functions for input/output,
-// and even run the liquidator for a few seconds before canceling
-// after replacing client-requiring steps with mockups using
-// Customize() to test it as a whole.
-
 import (
 	"context"
 	"fmt"
@@ -160,7 +155,7 @@ func (s *IntegrationTestSuite) TestBaseSelectFunc() {
 			Borrowed:   borrowed,
 			Collateral: collateral,
 		}
-		order, ok, err := baseSelectFunc(context.Background(), config, target)
+		order, ok, err := defaultSelectFunc(context.Background(), config, target)
 		s.Require().NoError(err)
 		s.Require().Equal(tc.Ok, ok)
 		if tc.Ok {
@@ -247,7 +242,7 @@ func (s *IntegrationTestSuite) TestBaseApproveFunc() {
 				Amount: sdk.NewInt(tc.RewardAmount),
 			},
 		}
-		ok, err := baseApproveFunc(context.Background(), nil, order)
+		ok, err := defaultApproveFunc(context.Background(), nil, order)
 		s.Require().Equal(tc.Ok, ok)
 		if tc.Error == "" {
 			s.Require().NoError(err)
@@ -274,7 +269,7 @@ func (s *IntegrationTestSuite) TestSweepLiquidation() {
 		return nil, nil
 	}
 
-	// replace some liquidator base functions with test ones
+	// replace some liquidator default function with custom
 	Customize(&emptyTargetFunc, nil, nil, nil, nil, nil)
 
 	// start the liquidator loop
@@ -361,14 +356,14 @@ func (s *IntegrationTestSuite) TestSweepLiquidation() {
 		return targets, nil
 	}
 
-	// wrap base select function to detect when it executes
+	// wrap default select function to detect when it executes
 	var customSelectFunc types.SelectFunc = func(ctx context.Context, k *koanf.Koanf, t types.LiquidationTarget,
 	) (types.LiquidationOrder, bool, error) {
 		// log function execution and target address
 		steps = append(steps, "select from "+string(t.Addr))
 
-		// wrap base select func, which chooses denominations based on order or priority in config file
-		order, ok, err := baseSelectFunc(ctx, k, t)
+		// wrap default select func, which chooses denominations based on order or priority in config file
+		order, ok, err := defaultSelectFunc(ctx, k, t)
 		s.Require().NoError(err)
 		return order, ok, err
 	}
@@ -398,8 +393,8 @@ func (s *IntegrationTestSuite) TestSweepLiquidation() {
 			return false, nil
 		}
 
-		// wrap base approve func, which says yes to any nonzero reward amount
-		approved, err := baseApproveFunc(ctx, k, t)
+		// wrap default approve func, which says yes to any nonzero reward amount
+		approved, err := defaultApproveFunc(ctx, k, t)
 		s.Require().NoError(err)
 		return approved, err
 	}
@@ -413,7 +408,7 @@ func (s *IntegrationTestSuite) TestSweepLiquidation() {
 		return types.LiquidationOrder{}, nil
 	}
 
-	// swap liquidator base functions again
+	// swap liquidator functions again
 	Customize(
 		&customTargetFunc,
 		&customSelectFunc,

@@ -20,10 +20,10 @@ func errInvalidConfig(k *koanf.Koanf, key string) error {
 	return fmt.Errorf("invalid %s: %s", key, val)
 }
 
-// baseTargetFunc queries the chain for all eligible liquidation
+// defaultTargetFunc queries the chain for all eligible liquidation
 // targets and their total borrowed and collateral, converting collateral uTokens
 // to equivalent base tokens.
-var baseTargetFunc types.TargetFunc = func(
+var defaultTargetFunc types.TargetFunc = func(
 	ctx context.Context, k *koanf.Koanf,
 ) ([]types.LiquidationTarget, error) {
 	// TODO: body
@@ -35,17 +35,17 @@ var baseTargetFunc types.TargetFunc = func(
 	return nil, nil
 }
 
-// validateBaseTargetConfig is the config file validator associated with baseTargetFunc
-func validateBaseTargetConfig(k *koanf.Koanf) error {
+// validateDefaultTargetConfig is the config file validator associated with defaultTargetFunc
+func validateDefaultTargetConfig(k *koanf.Koanf) error {
 	return nil
 }
 
-// baseSelectFunc receives a LiquidationTarget indicating a single borrower's
+// defaultSelectFunc receives a LiquidationTarget indicating a single borrower's
 // address, borrows, and collateral, and returns preferred reward and repay denoms.
 // It chooses via simple order or priority using slices of denoms set in the config
 // file, Then sets reward amount to zero, which opts out of a user-enforced minimum ratio
 // of reward:repay, and trusts the module's oracle.
-var baseSelectFunc types.SelectFunc = func(ctx context.Context, k *koanf.Koanf, target types.LiquidationTarget,
+var defaultSelectFunc types.SelectFunc = func(ctx context.Context, k *koanf.Koanf, target types.LiquidationTarget,
 ) (types.LiquidationOrder, bool, error) {
 	order := types.LiquidationOrder{Addr: target.Addr}
 
@@ -77,8 +77,8 @@ reward:
 	return order, true, nil
 }
 
-// validateBaseSelectConfig is the config file validator associated with baseSelectFunc.
-func validateBaseSelectConfig(k *koanf.Koanf) error {
+// validateDefaultSelectConfig is the config file validator associated with defaultSelectFunc.
+func validateDefaultSelectConfig(k *koanf.Koanf) error {
 	repays := k.Strings(ConfigKeySelectRepayDenoms)
 	if len(repays) == 0 {
 		return errInvalidConfig(k, ConfigKeySelectRepayDenoms)
@@ -90,10 +90,10 @@ func validateBaseSelectConfig(k *koanf.Koanf) error {
 	return nil
 }
 
-// baseEstimateFunc simulates the result of a MsgLiquidate in selected
+// defaultEstimateFunc simulates the result of a MsgLiquidate in selected
 // denominations as closely as possible to how it would be executed by the leverage
 // module on the umee chain.
-var baseEstimateFunc types.EstimateFunc = func(ctx context.Context, k *koanf.Koanf, intent types.LiquidationOrder,
+var defaultEstimateFunc types.EstimateFunc = func(ctx context.Context, k *koanf.Koanf, intent types.LiquidationOrder,
 ) (types.LiquidationOrder, error) {
 	// TODO: body
 	// - use oracle query client, query required exchange rates
@@ -102,13 +102,13 @@ var baseEstimateFunc types.EstimateFunc = func(ctx context.Context, k *koanf.Koa
 	return types.LiquidationOrder{}, nil
 }
 
-// validateBaseEstimateConfig is the config file validator associated with baseEstimateFunc
-func validateBaseEstimateConfig(k *koanf.Koanf) error {
+// validateDefaultEstimateConfig is the config file validator associated with defaultEstimateFunc
+func validateDefaultEstimateConfig(k *koanf.Koanf) error {
 	return nil
 }
 
-// baseApproveFunc approves all nonzero estimated liquidation outcomes.
-var baseApproveFunc types.ApproveFunc = func(ctx context.Context, k *koanf.Koanf, estimate types.LiquidationOrder,
+// defaultApproveFunc approves all nonzero estimated liquidation outcomes.
+var defaultApproveFunc types.ApproveFunc = func(ctx context.Context, k *koanf.Koanf, estimate types.LiquidationOrder,
 ) (bool, error) {
 	if estimate.Addr.Empty() {
 		return false, fmt.Errorf("empty address")
@@ -125,14 +125,14 @@ var baseApproveFunc types.ApproveFunc = func(ctx context.Context, k *koanf.Koanf
 	return false, nil
 }
 
-// validateBaseApproveConfig is the config file validator associated with baseApproveFunc
-func validateBaseApproveConfig(k *koanf.Koanf) error {
+// validateDefaultApproveConfig is the config file validator associated with defaultApproveFunc
+func validateDefaultApproveConfig(k *koanf.Koanf) error {
 	return nil
 }
 
-// baseExecuteFunc attempts to execute a chosen liquidation, and reports back
+// defaultExecuteFunc attempts to execute a chosen liquidation, and reports back
 // the actual repaid and reward amounts if successful
-var baseExecuteFunc types.ExecuteFunc = func(ctx context.Context, k *koanf.Koanf, intent types.LiquidationOrder,
+var defaultExecuteFunc types.ExecuteFunc = func(ctx context.Context, k *koanf.Koanf, intent types.LiquidationOrder,
 ) (types.LiquidationOrder, error) {
 	// TODO: body
 	// - use keyring-enabled client to send a MsgLiquidate with fields from input "intent"
@@ -140,7 +140,7 @@ var baseExecuteFunc types.ExecuteFunc = func(ctx context.Context, k *koanf.Koanf
 	return types.LiquidationOrder{}, nil
 }
 
-// validateBaseExecuteConfig is the config file validator associated with baseExecuteFunc
-func validateBaseExecuteConfig(k *koanf.Koanf) error {
+// validateDefaultExecuteConfig is the config file validator associated with defaultExecuteFunc
+func validateDefaultExecuteConfig(k *koanf.Koanf) error {
 	return nil
 }
