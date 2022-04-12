@@ -5,18 +5,20 @@ import (
 	"time"
 
 	"github.com/knadh/koanf"
+	"github.com/knadh/koanf/providers/file"
 	"github.com/rs/zerolog"
 	"github.com/tendermint/tendermint/libs/sync"
 )
 
 var (
-	// lock used by sweepLiquidations, Reconfigure, and Customize
+	// lock used by sweepLiquidations, reconfigure, and Customize
 	lock sync.Mutex
 
-	Cancel func()
-	konfig *koanf.Koanf
-	logger *zerolog.Logger
-	ticker *time.Ticker
+	Cancel     func()
+	konfig     *koanf.Koanf
+	configFile *file.File
+	logger     zerolog.Logger = zerolog.Nop()
+	ticker     *time.Ticker
 
 	// password string
 )
@@ -26,13 +28,22 @@ var (
 // whose estimated outcomes it approves of. Returns only when context is canceled.
 func Start(
 	ctx context.Context,
-	log *zerolog.Logger,
+	log zerolog.Logger,
+	configPath string,
 	keyringPassword string,
 ) error {
 	ctx, Cancel = context.WithCancel(ctx)
 
 	logger = log
 	// password = keyringPassword
+
+	// load config file, then watch to reload on changes
+	configFile = file.Provider(configPath)
+	loadConfig()
+	err := configFile.Watch(reloadConfig)
+	if err != nil {
+		return err
+	}
 
 	// TODO: Create and start clients here. We need:
 	//	- umee node query client (e.g. QueryEligibleLiquidationTargets)
@@ -61,6 +72,12 @@ func sweepLiquidations(
 	lock.Lock()
 	defer lock.Unlock()
 
+	// on empty config, skip tick
+	if konfig == nil {
+		logger.Info().Msg("empty config")
+		return
+	}
+
 	// get a list of eligible liquidation targets
 	targets, err := getLiquidationTargets(ctx, konfig)
 	if err != nil {
@@ -68,7 +85,7 @@ func sweepLiquidations(
 		return
 	}
 
-	// iterate through  eligible liquidation targets
+	// iterate through eligible liquidation targets
 	for _, target := range targets {
 		// select one reward denom and one repay denom to consider on target address
 		intent, ok, err := selectLiquidationDenoms(ctx, konfig, target)

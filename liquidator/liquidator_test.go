@@ -3,6 +3,7 @@ package liquidator
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -253,10 +254,10 @@ func (s *IntegrationTestSuite) TestBaseApproveFunc() {
 }
 
 func (s *IntegrationTestSuite) TestSweepLiquidation() {
-	// test config: liquidator waits 1 second between loops
-	config := koanf.New(".")
-	config.Load(rawbytes.Provider(configBytes), toml.Parser())
-	Reconfigure(config)
+	// write test config to a file
+	configPath := s.T().TempDir() + "/config.toml"
+	err := os.WriteFile(configPath, configBytes, 0o644)
+	s.Require().NoError(err)
 
 	// this string slice will be used to check the order liquidation steps are executed
 	steps := []string{}
@@ -274,7 +275,7 @@ func (s *IntegrationTestSuite) TestSweepLiquidation() {
 
 	// start the liquidator loop
 	nolog := zerolog.Nop()
-	go Start(context.Background(), &nolog, "")
+	go Start(context.Background(), nolog, configPath, "")
 	time.Sleep(20 * time.Millisecond)
 	defer Cancel()
 

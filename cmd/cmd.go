@@ -9,9 +9,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/knadh/koanf"
-	"github.com/knadh/koanf/parsers/toml"
-	"github.com/knadh/koanf/providers/file"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -26,11 +23,6 @@ const (
 	flagLogFormat   = "log-format"
 )
 
-var (
-	logger     *zerolog.Logger
-	configFile *file.File
-)
-
 func NewRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "umeeliqd",
@@ -40,7 +32,7 @@ KEYRING_PASSPHRASE on start as well as requiring a toml config file.`,
 		RunE: liquidatorCmdHandler,
 	}
 
-	cmd.PersistentFlags().String(flagConfigPath, "umeeliqd.toml", "config file path")
+	cmd.PersistentFlags().String(flagConfigPath, "path/to/umeeliqd.toml", "config file path")
 	cmd.PersistentFlags().String(flagLogLevel, "debug", "log level")
 	cmd.PersistentFlags().String(flagLogFormat, "text", "log format (text|json)")
 
@@ -71,20 +63,10 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-
-	logger, err = getLogger(logLevel, logFormat)
+	logger, err := getLogger(logLevel, logFormat)
 	if err != nil {
 		return err
 	}
-
-	// load config file, then watch to reload on changes
-	configFile = file.Provider(configPath)
-	reloadConfig(struct{}{}, nil)
-	err = configFile.Watch(reloadConfig)
-	if err != nil {
-		return err
-	}
-
 	password, err := getPassword()
 	if err != nil {
 		return err
@@ -94,37 +76,16 @@ func liquidatorCmdHandler(cmd *cobra.Command, _ []string) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	// listen for and trap any OS signal to gracefully shutdown and exit
-	trapSignal(cancel, logger)
+	trapSignal(cancel, &logger)
 
 	g.Go(func() error {
 		// returns on context canceled
-		return liquidator.Start(ctx, logger, password)
+		return liquidator.Start(ctx, logger, configPath, password)
 	})
 
 	// Block main process until all spawned goroutines have gracefully exited and
 	// signal has been captured in the main process or if an error occurs.
 	return g.Wait()
-}
-
-// reloadConfig is called by koanf file watcher, for which event is always nil.
-func reloadConfig(event interface{}, err error) {
-	if err != nil {
-		logger.Err(err).Msg("config file watch error")
-		return
-	}
-
-	logger.Info().Msg("config changed. Reloading ...")
-
-	k := koanf.New(".")
-	if err := k.Load(configFile, toml.Parser()); err != nil {
-		logger.Err(err).Msg("config file load error")
-	}
-
-	// Send the config file to liquidator, which will update
-	// if ValidateConfig(k) also passes.
-	if err := liquidator.Reconfigure(k); err != nil {
-		logger.Err(err).Msg("error validating config")
-	}
 }
 
 // getPassword reads the keyring password from an environment variable.
@@ -138,10 +99,10 @@ func getPassword() (string, error) {
 
 // getLogger returns a zerolog logger with the given level and format. Log format
 // should be "json" or "text".
-func getLogger(logLevel, logFormat string) (*zerolog.Logger, error) {
+func getLogger(logLevel, logFormat string) (zerolog.Logger, error) {
 	logLvl, err := zerolog.ParseLevel(logLevel)
 	if err != nil {
-		return nil, err
+		return zerolog.Nop(), err
 	}
 
 	logFmt := strings.ToLower(logFormat)
@@ -153,11 +114,10 @@ func getLogger(logLevel, logFormat string) (*zerolog.Logger, error) {
 	case "text":
 		logWriter = zerolog.ConsoleWriter{Out: os.Stderr}
 	default:
-		return nil, fmt.Errorf("invalid logging format: %s", logFmt)
+		return zerolog.Nop(), fmt.Errorf("invalid logging format: %s", logFmt)
 	}
 
-	l := zerolog.New(logWriter).Level(logLvl).With().Timestamp().Logger()
-	return &l, nil
+	return zerolog.New(logWriter).Level(logLvl).With().Timestamp().Logger(), nil
 }
 
 // trapSignal will listen for any OS signal and invoke Done on the main
