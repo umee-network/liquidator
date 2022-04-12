@@ -12,9 +12,7 @@ updates:
       interval: daily
     open-pull-requests-limit: 10
     reviewers:
-      - toteki
-      - adamewozniak
-      - RafilxTenfen
+      - umee-network/core-devs
     labels:
       - "A:Automerge"
       - "T:Dependencies"
